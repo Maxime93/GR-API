@@ -25,10 +25,10 @@ def get_categories():
         return {'message': "no categories were found"}
     return json.dumps([(dict(row.items())) for row in data])
 
-# Get all the products from one category
+# Get all the products from one category that were not purchased
 @app.get('/products/<int:category_id>')
 def get_products(category_id):
-    query = f"SELECT id, name, sellin, quality, price FROM product WHERE category_id={category_id}"
+    query = f"SELECT id, name, sellin, quality, price FROM product WHERE category_id={category_id} AND purchased=0"
     data = execute_query(query)
     if not data:
         return {'message': f"product id `{category_id}` was not found"}
@@ -37,7 +37,7 @@ def get_products(category_id):
 # Get product
 @app.get('/product/<int:product_id>')
 def get_product(product_id):
-    query = f"SELECT id, name, sellin, quality, price FROM product WHERE id={product_id}"
+    query = f"SELECT id, name, sellin, quality, price, purchased FROM product WHERE id={product_id}"
     data = execute_query(query)
     if not data:
         return {'message': f"product id `{product_id}` was not found"}
@@ -62,6 +62,41 @@ def search(search_string):
     data = execute_query(query)
     if not data:
         return {'message': f"no results found for search `{search_string}` was not found"}
+    return json.dumps([(dict(row.items())) for row in data])
+
+# Get an account
+@app.get('/account/<int:account_id>')
+def get_account(account_id):
+    query = f"SELECT * FROM account WHERE id={account_id}"
+    data = execute_query(query)
+    if not data:
+        return {'message': f"account id `{account_id}` was not found"}
+    return json.dumps([(dict(row.items())) for row in data])
+
+# Login gets an email and returns an account id
+@app.get('/login/<string:mail>')
+def login(mail):
+    query = f"SELECT id FROM account WHERE mail='{mail}'"
+    data = execute_query(query)
+    if not data:
+        return {'message': f"account with email `{mail}` was not found"}
+    return json.dumps([(dict(row.items())) for row in data])
+
+# Get cart for an account
+@app.get('/cart/<int:account_id>')
+def get_cart(account_id):
+    query = f"""
+    SELECT product.name, product.sellin, product.quality, product.price, account.mail
+    FROM cart
+    LEFT JOIN product ON cart.product_id = product.id LEFT JOIN account ON cart.account_id = account.id 
+    WHERE cart.account_id={account_id}
+    AND cart.purchased=0
+    AND product.purchased=0
+    """
+    # query = f"SELECT * FROM cart WHERE account_id='{account_id}'"
+    data = execute_query(query)
+    if not data:
+        return {'message': f"cart for account `{account_id}` is empty"}
     return json.dumps([(dict(row.items())) for row in data])
 
 # COMMENTS FOR LATER
