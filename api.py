@@ -115,6 +115,14 @@ def add_product():
     INSERT INTO product (name, sellin, quality, description, photo, price, category_id)
     VALUES ('{data["name"]}', '{data["sellin"]}', '{data["quality"]}', '{data["description"]}', '{data["photo"]}', '{data["price"]}', '{data["category_id"]}');
     """
+
+    qty = data.get('qty')
+    if qty is not None:
+        for i in range(qty):
+            insert_query(query)
+    else:
+        insert_query(query)
+
     insert_query(query)
     return {'message': 'success'}
 
