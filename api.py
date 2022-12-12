@@ -1,6 +1,7 @@
 from apiflask import APIFlask, Schema, abort
 from apiflask.fields import Integer, String, List, Nested
 from apiflask.validators import Length, OneOf
+from flask import request
 
 import json
 from sqlalchemy import create_engine
@@ -14,6 +15,10 @@ engine = create_engine(db_path, echo=False)
 def execute_query(query):
     with engine.begin() as con:
         return con.execute(query).fetchall()
+
+def insert_query(query):
+    with engine.begin() as con:
+        return con.execute(query)
 
 def get_min_product(product):
     return {'id': product['id'], 'name': product['name'], 'sellin': product['sellin'], 'quality': product['quality'], 'price': product['price']}
@@ -56,8 +61,6 @@ def get_product_bundle(product_id):
 # Do a very simple, non optimized search
 @app.get('/search/<string:search_string>')
 def search(search_string):
-    result = []
-
     query = f"SELECT * FROM product where name like '%{search_string}%'"
     data = execute_query(query)
     if not data:
@@ -93,11 +96,27 @@ def get_cart(account_id):
     AND cart.purchased=0
     AND product.purchased=0
     """
-    # query = f"SELECT * FROM cart WHERE account_id='{account_id}'"
     data = execute_query(query)
     if not data:
         return {'message': f"cart for account `{account_id}` is empty"}
     return json.dumps([(dict(row.items())) for row in data])
+
+# Get cart for an account
+@app.post('/add_product')
+def add_product():
+    data = request.get_json()
+    # name, sellin, quality, description, photo, price, category_id
+    columns = ['name', 'sellin', 'quality', 'description', 'photo', 'price', 'category_id']
+    for col in columns:
+        if data.get(col) is None:
+            return {'message': f'cannot add product, missing {col} information'}
+
+    query = f"""
+    INSERT INTO product (name, sellin, quality, description, photo, price, category_id)
+    VALUES ('{data["name"]}', '{data["sellin"]}', '{data["quality"]}', '{data["description"]}', '{data["photo"]}', '{data["price"]}', '{data["category_id"]}');
+    """
+    insert_query(query)
+    return {'message': 'success'}
 
 # COMMENTS FOR LATER
 
