@@ -57,7 +57,6 @@ def get_product_bundle(product_id):
         return {'message': f"product id `{product_id}` was not found"}
     return json.dumps([(dict(row.items())) for row in data])
 
-
 # Do a very simple, non optimized search
 @app.get('/search/<string:search_string>')
 def search(search_string):
@@ -85,11 +84,29 @@ def login(mail):
         return {'message': f"account with email `{mail}` was not found"}
     return json.dumps([(dict(row.items())) for row in data])
 
+# Purchase available items in cart for an account
+@app.post('/purchase/<int:account_id>')
+def purchase(account_id):
+    cart_data = json.loads(get_cart(account_id))
+
+    if not cart_data:
+        return {"message": "nothing in cart for account `{account_id}`"}
+
+    for product in cart_data:
+        # Update the cart table
+        query = f"UPDATE cart SET purchased = 1 WHERE id={product['cart_id']}"
+        insert_query(query)
+        # Update the product table
+        query = f"UPDATE product SET purchased = 1 WHERE id={product['product_id']}"
+        insert_query(query)
+
+    return {"message": "success"}
+
 # Get cart for an account
 @app.get('/cart/<int:account_id>')
 def get_cart(account_id):
     query = f"""
-    SELECT product.name, product.sellin, product.quality, product.price, account.mail
+    SELECT cart.id as cart_id, product.id as product_id, product.name, product.sellin, product.quality, product.price, account.mail
     FROM cart
     LEFT JOIN product ON cart.product_id = product.id LEFT JOIN account ON cart.account_id = account.id 
     WHERE cart.account_id={account_id}
@@ -101,11 +118,10 @@ def get_cart(account_id):
         return {'message': f"cart for account `{account_id}` is empty"}
     return json.dumps([(dict(row.items())) for row in data])
 
-# Get cart for an account
+# Add product(s) to the inventory
 @app.post('/add_product')
 def add_product():
     data = request.get_json()
-    # name, sellin, quality, description, photo, price, category_id
     columns = ['name', 'sellin', 'quality', 'description', 'photo', 'price', 'category_id']
     for col in columns:
         if data.get(col) is None:
@@ -125,54 +141,3 @@ def add_product():
 
     insert_query(query)
     return {'message': 'success'}
-
-# COMMENTS FOR LATER
-
-# class CategoryIn(Schema):
-#     name = String(required=True, validate=Length(0, 10))
-#     category = String(required=True, validate=OneOf(['dog', 'cat']))
-
-# class MinProductOut(Schema):
-#     id = Integer()
-#     name = String()
-#     category = String()
-
-# class FullProductOut(Schema):
-#     id = Integer()
-#     name = String()
-#     category = String()
-
-# class CategoryOut(Schema):
-#     id = Integer()
-#     name = String()
-
-# class CategoriesOut(Schema):
-#     l = List(Nested(CategoryOut))
-
-# @app.get('/categories')
-# @app.output(CategoriesOut)
-# def get_categories():
-#     return categories
-
-
-# @app.get('/pets/<int:pet_id>')
-# @app.output(PetOut)
-# def get_pet(pet_id):
-#     if pet_id > len(pets) - 1:
-#         abort(404)
-#     # you can also return an ORM/ODM model class instance directly
-#     # APIFlask will serialize the object into JSON format
-#     return pets[pet_id]
-
-
-# @app.patch('/pets/<int:pet_id>')
-# @app.input(PetIn(partial=True))
-# @app.output(PetOut)
-# def update_pet(pet_id, data):
-#     # the validated and parsed input data will
-#     # be injected into the view function as a dict
-#     if pet_id > len(pets) - 1:
-#         abort(404)
-#     for attr, value in data.items():
-#         pets[pet_id][attr] = value
-#     return pets[pet_id]
