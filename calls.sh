@@ -12,3 +12,8 @@ curl http://127.0.0.1:5000/cart/2
 curl http://127.0.0.1:5000/products/2
 
 curl http://127.0.0.1:5000/products/5
+
+curl -X 'post' \
+  'http://127.0.0.1:5000/purchase/2' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json'
