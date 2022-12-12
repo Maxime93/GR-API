@@ -2,76 +2,67 @@ from apiflask import APIFlask, Schema, abort
 from apiflask.fields import Integer, String, List, Nested
 from apiflask.validators import Length, OneOf
 
-categories = [
-    {'id': 0, 'name': 'STANDARD'},
-    {'id': 1, 'name': 'BRIE'},
-    {'id': 2, 'name': 'SULFURAS'},
-    {'id': 3, 'name': 'CONJURED'}
-]
-
-products = [
-    {'id':0, 'name':'product1', 'sellin': 9, 'quality':12, 'description':'description1', 'photo':'www.photo.com', 'price': 13.99, 'category_id': 0},
-    {'id':1, 'name':'product2', 'sellin': 9, 'quality':12, 'description':'description2', 'photo':'www.photo.com', 'price': 23.99, 'category_id': 0},
-    {'id':2, 'name':'product3', 'sellin': 9, 'quality':12, 'description':'description3', 'photo':'www.photo.com', 'price': 43.99, 'category_id': 1},
-    {'id':3, 'name':'product4', 'sellin': 9, 'quality':12, 'description':'description4', 'photo':'www.photo.com', 'price': 53.99, 'category_id': 2}
-]
+import json
+from sqlalchemy import create_engine
 
 app = APIFlask(__name__)
+
+db_path = "sqlite:///db/database.db"
+engine = create_engine(db_path, echo=False)
+
+# <TODO> Private, function, only callable by this package.
+def execute_query(query):
+    with engine.begin() as con:
+        return con.execute(query).fetchall()
 
 def get_min_product(product):
     return {'id': product['id'], 'name': product['name'], 'sellin': product['sellin'], 'quality': product['quality'], 'price': product['price']}
 
 @app.get('/categories')
 def get_categories():
-    return categories
+    data = execute_query("SELECT * FROM category")
+    if not data:
+        return {'message': "no categories were found"}
+    return json.dumps([(dict(row.items())) for row in data])
 
 # Get all the products from one category
 @app.get('/products/<int:category_id>')
 def get_products(category_id):
-    result = []
-    for product in products:
-        if product['category_id'] == category_id:
-            result.append(get_min_product(product))
-    if not result:
-        result = {'message': f"product id `{id}` was not found"}
-    return result
+    query = f"SELECT id, name, sellin, quality, price FROM product WHERE category_id={category_id}"
+    data = execute_query(query)
+    if not data:
+        return {'message': f"product id `{category_id}` was not found"}
+    return json.dumps([(dict(row.items())) for row in data])
 
 # Get product
 @app.get('/product/<int:product_id>')
-def get_product(id):
-    p = {'message': f"product id `{id}` was not found"}
-    for product in products:
-        if product['id'] == id:
-            return get_min_product(product)
-    return p
+def get_product(product_id):
+    query = f"SELECT id, name, sellin, quality, price FROM product WHERE id={product_id}"
+    data = execute_query(query)
+    if not data:
+        return {'message': f"product id `{product_id}` was not found"}
+    return json.dumps([(dict(row.items())) for row in data])
 
 # Get product bundle (more details)
 @app.get('/product_bundle/<int:product_id>')
-def get_product_bundle(id):
-    p = {'message': f"product id `{id}` was not found"}
-    for product in products:
-        if product['id'] == id:
-            return product
-    return p
+def get_product_bundle(product_id):
+    query = f"SELECT * FROM product WHERE id={product_id}"
+    data = execute_query(query)
+    if not data:
+        return {'message': f"product id `{product_id}` was not found"}
+    return json.dumps([(dict(row.items())) for row in data])
 
 
 # Do a very simple, non optimized search
 @app.get('/search/<string:search_string>')
 def search(search_string):
     result = []
-    for product in products:
-        if search_string in product['name']:
-            result.append(product)
-    if not result:
-        result = {'message': f"your search `{search_string}` did not yield any results"}
-    return result
 
-
-# get_categories() -> []string
-# get_products(pagination, category, sort: {sortBy: "sellIn" | "quality", order: "asc" | "desc")}) -> []min_products
-# get_product(id) -> min_product ({name, sellin, quality}) // min_product == compact ver.
-# get_product_bundle(id) -> product
-# search(string) -> []min_product
+    query = f"SELECT * FROM product where name like '%{search_string}%'"
+    data = execute_query(query)
+    if not data:
+        return {'message': f"no results found for search `{search_string}` was not found"}
+    return json.dumps([(dict(row.items())) for row in data])
 
 # COMMENTS FOR LATER
 
