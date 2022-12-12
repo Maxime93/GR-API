@@ -17,3 +17,11 @@ curl -X 'post' \
   'http://127.0.0.1:5000/purchase/2' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json'
+
+curl -X 'post' \
+  'http://127.0.0.1:5000/add_to_cart/2' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "product_id": 4
+}'

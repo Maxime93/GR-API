@@ -102,6 +102,21 @@ def purchase(account_id):
 
     return {"message": "success"}
 
+# Login gets an email and returns an account id
+@app.post('/add_to_cart/<int:account_id>')
+def add_to_cart(account_id):
+    data = request.get_json()
+    product_id = data.get("product_id")
+    if product_id is None:
+        return {"message": "no product id is request, cannot add to cart"}
+
+    query = f"""
+    INSERT INTO cart (account_id, product_id)
+    VALUES ('{account_id}', '{product_id}');
+    """
+    insert_query(query)
+    return {"message": "success"}
+
 # Get cart for an account
 @app.get('/cart/<int:account_id>')
 def get_cart(account_id):
