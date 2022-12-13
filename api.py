@@ -72,7 +72,7 @@ def get_account(account_id):
     query = f"SELECT * FROM account WHERE id={account_id}"
     data = execute_query(query)
     if not data:
-        return {'message': f"account id `{account_id}` was not found"}
+        return {'status': 'not found', 'message': f"account id `{account_id}` was not found"}
     return json.dumps([(dict(row.items())) for row in data])
 
 # Login gets an email and returns an account id
@@ -87,6 +87,10 @@ def login(mail):
 # Purchase available items in cart for an account
 @app.post('/purchase/<int:account_id>')
 def purchase(account_id):
+    account_data = get_account(account_id)
+    if account_data.get('status') == 'not found':
+        return {'status': 'not found', 'message': 'account not found'}
+
     cart_data = json.loads(get_cart(account_id))
 
     if not cart_data:
@@ -105,6 +109,10 @@ def purchase(account_id):
 # Login gets an email and returns an account id
 @app.post('/add_to_cart/<int:account_id>')
 def add_to_cart(account_id):
+    account_data = get_account(account_id)
+    if account_data.get('status') == 'not found':
+        return {'status': 'not found', 'message': 'account not found'}
+
     data = request.get_json()
     product_id = data.get("product_id")
     if product_id is None:
@@ -120,6 +128,10 @@ def add_to_cart(account_id):
 # Get cart for an account
 @app.get('/cart/<int:account_id>')
 def get_cart(account_id):
+    account_data = get_account(account_id)
+    if account_data.get('status') == 'not found':
+        return {'status': 'not found', 'message': 'account not found'}
+
     query = f"""
     SELECT cart.id as cart_id, product.id as product_id, product.name, product.sellin, product.quality, product.price, account.mail
     FROM cart
